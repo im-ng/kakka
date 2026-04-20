@@ -1,0 +1,1069 @@
+---
+import Layout from '../layouts/Layout.astro'
+---
+
+<Layout>
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 flex-1 flex flex-col min-h-0">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between py-5 border-b z-50
+    border-sage-pale dark:border-navy-lighter bg-mint-light/80 dark:bg-navy/80 backdrop-blur-md">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 -rotate-2 hover:rotate-0 transition-transform flex items-center justify-center">
+        <img src="/kakka.png" alt="Kakka" class="w-full h-full object-cover" />
+      </div>
+      <span class="font-display text-xl font-bold text-navy dark:text-mint tracking-tight">Kakka</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="fontToggle" aria-label="Font size"
+        class="w-8 h-8 rounded-lg bg-white dark:bg-navy-light text-slate dark:text-sage
+        flex items-center justify-center text-sm hover:scale-105 transition-all shadow-sm dark:shadow-none
+        border border-sage-pale dark:border-navy-lighter cursor-pointer font-bold">
+        Aa
+      </button>
+      <button id="themeToggle" aria-label="Toggle theme"
+        class="w-8 h-8 rounded-lg bg-white dark:bg-navy-light text-slate dark:text-sage
+        flex items-center justify-center text-sm hover:scale-105 transition-all shadow-sm dark:shadow-none
+        border border-sage-pale dark:border-navy-lighter cursor-pointer">
+        <svg id="moonIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg id="sunIcon" class="hidden dark:block" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
+      <div class="relative">
+        <button id="userBtn" aria-label="User menu"
+          class="w-8 h-8 rounded-full bg-sage text-white text-xs font-semibold flex items-center justify-center
+          hover:scale-105 transition-transform cursor-pointer shadow-sm shadow-sage/25">A</button>
+        <div id="userDrop" class="dropdown hidden absolute right-0 top-full mt-2 w-44 rounded-xl p-1.5 z-50
+          bg-white dark:bg-navy-light shadow-lg dark:shadow-xl
+          border border-sage-pale dark:border-navy-lighter">
+          <button id="clearAllBtn" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs
+            text-slate dark:text-sage hover:bg-mint/50 dark:hover:bg-navy-lighter/40 transition-colors cursor-pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1H4a2 2 0 0 0-1 1v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><path d="M7 7V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3"/></svg>
+            Archived
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tabs + Actions -->
+  <div class="flex flex-col sm:flex-row sm:items-center gap-3 py-4">
+    <div class="inline-flex rounded-xl p-1 bg-sage-pale/60 dark:bg-navy-lighter/50">
+      <button data-tab="list" class="tab-btn active text-xs font-medium px-4 py-2 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer
+        text-navy dark:text-mint bg-white dark:bg-navy shadow-sm">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Todos
+      </button>
+      <button data-tab="kanban" class="tab-btn text-xs font-medium px-4 py-2 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer
+        text-slate dark:text-sage-light">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Kanban
+      </button>
+    </div>
+    <div class="sm:ml-auto flex items-center gap-3">
+      <span class="text-[11px] font-medium text-slate dark:text-sage-dark">
+        <span id="totalCount" class="text-navy dark:text-sage font-semibold">0</span> tasks
+        <span id="archivedBadge" class="hidden text-[10px] ml-1 px-1.5 py-0.5 rounded-full bg-sage/15 text-sage-dark dark:bg-sage/20 dark:text-sage-light">archived</span>
+      </span>
+      <!-- Filter toggle -->
+      <button id="filterToggle" class="text-xs font-medium px-3 py-2 rounded-lg cursor-pointer transition-colors
+        text-slate dark:text-sage-light bg-mint/50 dark:bg-navy-lighter/40
+        hover:bg-mint dark:hover:bg-navy-lighter/60
+        border border-sage-pale dark:border-navy-lighter/40
+        flex items-center gap-1.5">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Filter
+      </button>
+      <button id="addBtn"
+        class="text-xs font-medium px-4 py-2 rounded-lg bg-sage text-navy hover:bg-sage-dark transition-colors cursor-pointer
+        shadow-sm shadow-sage/20 flex items-center gap-1.5">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        New Task
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Bar (hidden by default) -->
+  <div id="filterBar" class="hidden mb-4 p-3 rounded-xl bg-white dark:bg-navy-light border border-sage-pale/60 dark:border-navy-lighter/30 shadow-sm dark:shadow-none fade-up">
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="relative">
+        <button id="tagDropdownBtn" class="text-[10.5px] font-semibold uppercase tracking-wider text-slate dark:text-sage-light flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-sage-pale dark:border-navy-lighter/50 bg-mint/50 dark:bg-navy-lighter/50 hover:bg-sage-pale dark:hover:bg-navy-lighter/60 transition-colors cursor-pointer">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M7 18l6-6-6-6"/></svg>
+          Tags
+        </button>
+        <div id="tagDropdown" class="hidden absolute left-0 top-full mt-1 w-40 rounded-xl p-1.5 z-50 bg-white dark:bg-navy-light shadow-lg dark:shadow-xl border border-sage-pale dark:border-navy-lighter">
+        </div>
+      </div>
+      <div id="activeTagPills" class="flex flex-wrap gap-1.5"></div>
+      <div class="w-px h-5 bg-sage-pale dark:bg-navy-lighter/50 mx-1"></div>
+      <span class="text-[10.5px] font-semibold uppercase tracking-wider text-slate dark:text-sage-light mr-1">Date:</span>
+      <input id="filterDate" type="date"
+        class="text-xs px-2.5 py-1.5 rounded-lg outline-none transition-all
+        bg-mint/50 dark:bg-navy-lighter/50 text-navy dark:text-mint
+        border border-sage-pale dark:border-navy-lighter/50
+        focus:border-sage focus:ring-2 focus:ring-sage/15 cursor-pointer" />
+      <div class="w-px h-5 bg-sage-pale dark:bg-navy-lighter/50 mx-1"></div>
+      <input id="filterProject" type="text" placeholder="Project" list="projectList"
+        class="text-xs px-2.5 py-1.5 rounded-lg outline-none transition-all w-28
+        bg-mint/50 dark:bg-navy-lighter/50 text-navy dark:text-mint
+        border border-sage-pale dark:border-navy-lighter/50
+        focus:border-sage focus:ring-2 focus:ring-sage/15 cursor-pointer" />
+      <datalist id="projectList"></datalist>
+      <button id="filterClear" class="text-[10px] font-medium px-2 py-1 rounded-lg bg-mint dark:bg-navy-lighter/40
+        text-slate dark:text-sage-light hover:bg-sage-pale dark:hover:bg-navy-lighter/60 transition-colors cursor-pointer">
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <main class="flex-1 flex flex-col min-h-0">
+    <!-- List View -->
+    <section id="listView" class="view-panel flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto w-full">
+      <div id="todoList" class="grid w-full h-full"></div>
+    </section>
+
+    <!-- Kanban View -->
+    <section id="kanbanView" class="view-panel hidden flex-1 min-h-0 overflow-hidden w-full">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 h-full" id="kanbanBoard">
+        <!-- To Do -->
+        <div class="col-drop rounded-2xl p-3.5 bg-sage-pale/40 dark:bg-navy-light/60 border border-sage-pale/80 dark:border-navy-lighter/40 flex flex-col min-h-0"
+          data-status="todo">
+          <div class="flex items-center justify-between mb-3 pb-2.5 border-b border-sage-pale dark:border-navy-lighter/40 flex-shrink-0">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span class="text-[11px] font-semibold uppercase tracking-wider text-navy dark:text-mint-light">To Do</span>
+            </div>
+            <span id="cTodo" class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white dark:bg-navy text-slate dark:text-sage-light">0</span>
+          </div>
+          <div id="kTodo" class="flex flex-col gap-2.5 min-h-[50px] overflow-y-auto flex-1"></div>
+          <button data-add-status="todo"
+            class="mt-2.5 w-full py-2.5 rounded-xl text-[11px] font-medium text-slate dark:text-sage-dark
+            border border-dashed border-sage-pale dark:border-navy-lighter/50
+            hover:bg-white dark:hover:bg-navy-lighter/40 hover:text-navy dark:hover:text-sage
+            transition-colors cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Add
+          </button>
+        </div>
+        <!-- In Progress -->
+        <div class="col-drop rounded-2xl p-3.5 bg-sage-pale/40 dark:bg-navy-light/60 border border-sage-pale/80 dark:border-navy-lighter/40 flex flex-col min-h-0"
+          data-status="progress">
+          <div class="flex items-center justify-between mb-3 pb-2.5 border-b border-sage-pale dark:border-navy-lighter/40 flex-shrink-0">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-sage"></span>
+              <span class="text-[11px] font-semibold uppercase tracking-wider text-navy dark:text-mint-light">In Progress</span>
+            </div>
+            <span id="cProg" class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white dark:bg-navy text-slate dark:text-sage-light">0</span>
+          </div>
+          <div id="kProg" class="flex flex-col gap-2.5 min-h-[50px] overflow-y-auto flex-1"></div>
+          <button data-add-status="progress"
+            class="mt-2.5 w-full py-2.5 rounded-xl text-[11px] font-medium text-slate dark:text-sage-dark
+            border border-dashed border-sage-pale dark:border-navy-lighter/50
+            hover:bg-white dark:hover:bg-navy-lighter/40 hover:text-navy dark:hover:text-sage
+            transition-colors cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Add
+          </button>
+        </div>
+        <!-- Done -->
+        <div class="col-drop rounded-2xl p-3.5 bg-sage-pale/40 dark:bg-navy-light/60 border border-sage-pale/80 dark:border-navy-lighter/40 flex flex-col min-h-0"
+          data-status="done">
+          <div class="flex items-center justify-between mb-3 pb-2.5 border-b border-sage-pale dark:border-navy-lighter/40 flex-shrink-0">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span class="text-[11px] font-semibold uppercase tracking-wider text-navy dark:text-mint-light">Done</span>
+            </div>
+            <span id="cDone" class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white dark:bg-navy text-slate dark:text-sage-light">0</span>
+          </div>
+          <div id="kDone" class="flex flex-col gap-2.5 min-h-[50px] overflow-y-auto flex-1"></div>
+          <button data-add-status="done"
+            class="mt-2.5 w-full py-2.5 rounded-xl text-[11px] font-medium text-slate dark:text-sage-dark
+            border border-dashed border-sage-pale dark:border-navy-lighter/50
+            hover:bg-white dark:hover:bg-navy-lighter/40 hover:text-navy dark:hover:text-sage
+            transition-colors cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Add
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-4 pt-4 border-t border-sage-pale dark:border-navy-lighter/40">
+    <p class="text-center text-[11px] text-slate/60 dark:text-sage-dark/50 flex items-center justify-center gap-1.5">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      Organize your day, one task at a time.
+    </p>
+  </footer>
+</div>
+
+<!-- Description Preview Overlay -->
+<div id="descOverlay" class="modal-bg hidden fixed inset-0 z-[100] flex items-center justify-center p-4
+  bg-navy/20 dark:bg-black/40 backdrop-blur-sm">
+  <div class="modal-box w-full max-w-lg rounded-2xl p-5
+    bg-white dark:bg-navy-light shadow-xl
+    border border-sage-pale dark:border-navy-lighter/40">
+    <div class="flex items-center justify-between mb-3">
+      <h2 id="descOverlayTitle" class="text-sm font-bold text-navy dark:text-mint">Description</h2>
+      <button id="descOverlayClose" aria-label="Close"
+        class="w-7 h-7 rounded-lg bg-mint dark:bg-navy-lighter text-slate dark:text-sage-dark
+        flex items-center justify-center text-xs hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-400 dark:hover:text-red-300
+        transition-colors cursor-pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="descOverlayContent" class="text-sm text-navy dark:text-mint leading-relaxed max-h-[60vh] overflow-y-auto"></div>
+    <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-sage-pale dark:border-navy-lighter/40">
+      <button id="descOverlayClose2"
+        class="text-xs font-medium px-4 py-2 rounded-lg cursor-pointer transition-colors
+        text-slate dark:text-sage-light bg-mint/50 dark:bg-navy-lighter/40
+        hover:bg-sage-pale dark:hover:bg-navy-lighter/60">Close</button>
+      <button id="descOverlayEdit"
+        class="text-xs font-medium px-4 py-2 rounded-lg bg-sage text-navy hover:bg-sage-dark
+        transition-colors cursor-pointer shadow-sm shadow-sage/15">Edit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="modalBg" class="modal-bg hidden fixed inset-0 z-[100] flex items-center justify-center p-4
+  bg-navy/20 dark:bg-black/40 backdrop-blur-sm">
+  <div class="modal-box w-full max-w-md rounded-2xl p-5
+    bg-white dark:bg-navy-light shadow-xl
+    border border-sage-pale dark:border-navy-lighter/40">
+    <div class="flex items-center justify-between mb-5">
+      <h2 id="modalTitle" class="text-sm font-bold text-navy dark:text-mint">New Task</h2>
+      <button id="modalClose" aria-label="Close"
+        class="w-7 h-7 rounded-lg bg-mint dark:bg-navy-lighter text-slate dark:text-sage-dark
+        flex items-center justify-center text-xs hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-400 dark:hover:text-red-300
+        transition-colors cursor-pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form id="taskForm" class="flex flex-col gap-4">
+      <div>
+        <label class="block text-[10.5px] font-semibold uppercase tracking-wider mb-1.5 text-slate dark:text-sage-light">Title</label>
+        <input id="fTitle" type="text" required placeholder="What needs to be done?"
+          class="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none transition-all
+          bg-mint/50 dark:bg-navy-lighter/50 text-navy dark:text-mint
+          border border-sage-pale dark:border-navy-lighter/50
+          focus:border-sage focus:ring-2 focus:ring-sage/15
+          placeholder:text-slate/40 dark:placeholder:text-sage-dark/40" />
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="block text-[10.5px] font-semibold uppercase tracking-wider text-slate dark:text-sage-light">Description</label>
+          <button type="button" id="mdPreviewBtn" class="text-[10px] font-medium text-slate dark:text-sage-light hover:text-navy dark:hover:text-mint transition-colors cursor-pointer">Preview</button>
+        </div>
+        <textarea id="fDesc" rows="2" placeholder="Add details (optional). **bold**, *italic*, `code`"
+          class="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none resize-none transition-all
+          bg-mint/50 dark:bg-navy-lighter/50 text-navy dark:text-mint
+          border border-sage-pale dark:border-navy-lighter/50
+          focus:border-sage focus:ring-2 focus:ring-sage/15
+          placeholder:text-slate/40 dark:placeholder:text-sage-dark/40"></textarea>
+        <div id="fDescPreview" class="hidden w-full px-3.5 py-2.5 rounded-xl text-sm
+          bg-mint/50 dark:bg-navy-lighter/50 text-navy dark:text-mint
+          border border-sage-pale dark:border-navy-lighter/50
+          min-h-[60px]"></div>
+      </div>
+      <div>
+        <label class="block text-[10.5px] font-semibold uppercase tracking-wider mb-2 text-slate dark:text-sage-light">Tags</label>
+        <div id="tagSel" class="flex flex-wrap gap-1.5">
+          <button type="button" data-tag="work"
+            class="tag-opt text-[11px] font-medium px-3 py-1.5 rounded-full cursor-pointer transition-all
+            bg-mint/60 dark:bg-navy-lighter/40 text-slate dark:text-sage-light
+            border border-sage-pale dark:border-navy-lighter/40
+            hover:border-sage dark:hover:border-sage">Work</button>
+          <button type="button" data-tag="personal"
+            class="tag-opt text-[11px] font-medium px-3 py-1.5 rounded-full cursor-pointer transition-all
+            bg-mint/60 dark:bg-navy-lighter/40 text-slate dark:text-sage-light
+            border border-sage-pale dark:border-navy-lighter/40
+            hover:border-sage dark:hover:border-sage">Personal</button>
+          <button type="button" data-tag="urgent"
+            class="tag-opt text-[11px] font-medium px-3 py-1.5 rounded-full cursor-pointer transition-all
+            bg-mint/60 dark:bg-navy-lighter/40 text-slate dark:text-sage-light
+            border border-sage-pale dark:border-navy-lighter/40
+            hover:border-sage dark:hover:border-sage">Urgent</button>
+          <button type="button" data-tag="idea"
+            class="tag-opt text-[11px] font-medium px-3 py-1.5 rounded-full cursor-pointer transition-all
+            bg-mint/60 dark:bg-navy-lighter/40 text-slate dark:text-sage-light
+            border border-sage-pale dark:border-navy-lighter/40
+            hover:border-sage dark:hover:border-sage">Idea</button>
+        </div>
+      </div>
+      <div>
+        <label class="block text-[10.5px] font-semibold uppercase tracking-wider mb-1.5 text-slate dark:text-sage-light">Project</label>
+        <input id="fProject" type="text" placeholder="Project name (optional)"
+          class="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none transition-all
+          bg-mint/50 dark:bg-navy-lighter/50 text-navy dark:text-mint
+          border border-sage-pale dark:border-navy-lighter/50
+          focus:border-sage focus:ring-2 focus:ring-sage/15
+          placeholder:text-slate/40 dark:placeholder:text-sage-dark/40" />
+      </div>
+      <div>
+        <label class="block text-[10.5px] font-semibold uppercase tracking-wider mb-1.5 text-slate dark:text-sage-light">Due Date</label>
+        <input id="fDueDate" type="date"
+          class="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none transition-all
+          bg-mint/50 dark:bg-navy-lighter/50 text-navy dark:text-mint
+          border border-sage-pale dark:border-navy-lighter/50
+          focus:border-sage focus:ring-2 focus:ring-sage/15 cursor-pointer
+          dark:[color-scheme:dark]" />
+      </div>
+      <div>
+        <label class="block text-[10.5px] font-semibold uppercase tracking-wider mb-1.5 text-slate dark:text-sage-light">Status</label>
+        <select id="fStatus"
+          class="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none appearance-none cursor-pointer transition-all
+          bg-mint/50 dark:bg-navy-lighter/50 text-navy dark:text-mint
+          border border-sage-pale dark:border-navy-lighter/50
+          focus:border-sage focus:ring-2 focus:ring-sage/15">
+          <option value="todo">To Do</option>
+          <option value="progress">In Progress</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+      <input type="hidden" id="fEditId" value="" />
+      <div class="flex justify-between gap-2 pt-3 mt-1 border-t border-sage-pale dark:border-navy-lighter/40">
+<button type="button" id="fDelete" class="hidden text-xs font-medium px-4 py-2 rounded-lg cursor-pointer transition-colors
+          text-slate dark:text-sage bg-mint/50 dark:bg-navy-lighter/40
+          hover:bg-sage-pale dark:hover:bg-navy-lighter/60">
+          <svg class="inline -mt-px mr-1" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1H4a2 2 0 0 0-1 1v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><path d="M7 7V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3"/></svg>
+          Archive
+        </button>
+        <div class="flex gap-2 ml-auto">
+          <button type="button" id="fCancelBtn"
+            class="text-xs font-medium px-4 py-2 rounded-lg cursor-pointer transition-colors
+            text-slate dark:text-sage-light bg-mint/50 dark:bg-navy-lighter/40
+            hover:bg-sage-pale dark:hover:bg-navy-lighter/60">Cancel</button>
+          <button type="submit" id="fSubmit"
+            class="text-xs font-medium px-4 py-2 rounded-lg bg-sage text-navy hover:bg-sage-dark
+            transition-colors cursor-pointer shadow-sm shadow-sage/15">Add Task</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div id="toasts" class="fixed bottom-5 right-5 z-[200] flex flex-col gap-2"></div>
+
+<script is:inline>
+const API = 'http://0.0.0.0:8000/api';
+
+const ICONS = {
+  check: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  edit: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  archive: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1H4a2 2 0 0 0-1 1v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><path d="M7 7V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3"/></svg>',
+  empty: '<svg class="opacity-20 mb-4" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>',
+};
+
+function md(text) {
+  if (!text) return '';
+  let h = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  h = h.replace(/__(.+?)__/g, '<strong>$1</strong>');
+  h = h.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  h = h.replace(/_(.+?)_/g, '<em>$1</em>');
+  h = h.replace(/`(.+?)`/g, '<code class="px-1 py-0.5 rounded bg-sage-pale/60 dark:bg-navy-lighter/60 text-navy dark:text-mint text-[11px]">$1</code>');
+  h = h.replace(/^### (.+)$/gm, '<h3 class="text-sm font-bold mt-2 mb-1 text-navy dark:text-mint">$1</h3>');
+  h = h.replace(/^## (.+)$/gm, '<h2 class="text-base font-bold mt-2 mb-1 text-navy dark:text-mint">$1</h2>');
+  h = h.replace(/^# (.+)$/gm, '<h1 class="text-lg font-bold mt-2 mb-1 text-navy dark:text-mint">$1</h1>');
+  h = h.replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>');
+  h = h.replace(/^(\d+)\. (.+)$/gm, '<li class="ml-4 list-decimal">$2</li>');
+  h = h.replace(/---/g, '<hr class="border-sage-pale dark:border-navy-lighter my-2">');
+  h = h.replace(/\n/g, '<br>');
+  return h;
+}
+
+function descPreview(text) {
+    if (!text) return '';
+    let h = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    h = h.replace(/^### .+$/gm, '');
+    h = h.replace(/^[-*] .+$/gm, '');
+    h = h.replace(/^\d+\. /gm, '');
+    h = h.replace(/---/g, '');
+    h = h.replace(/\n/g, ' ');
+    return h.slice(0, 100);
+  }
+
+let tasks = [];
+let selTags = [];
+let dragCard = null;
+let activeFilters = { tags: [], date: '', project: '' };
+let seenIds = new Set();
+
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const esc = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+const fmtDate = s => { if (!s) return ''; try { const d = new Date(s); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch { return s; } };
+
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    ...opts,
+  });
+  if (!res.ok && res.status !== 404) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'API error');
+  }
+  return res;
+}
+
+// Theme
+const saved = localStorage.getItem('df-theme');
+if (saved) {
+  document.documentElement.className = saved;
+} else if (window.matchMedia('(prefers-color-scheme:dark)').matches) {
+  document.documentElement.className = 'dark';
+}
+
+$('#themeToggle').onclick = () => {
+  const html = document.documentElement;
+  html.classList.add('theme-transition');
+  const next = html.className.includes('dark') ? 'light' : 'dark';
+  html.className = next;
+  localStorage.setItem('df-theme', next);
+  setTimeout(() => html.classList.remove('theme-transition'), 450);
+};
+
+// Font size
+const fontSteps = [16, 19, 23];
+const fontLabels = ['A', 'Aa', 'Aa'];
+let fontIdx = parseInt(localStorage.getItem('df-font') || '0');
+function applyFont() {
+  document.documentElement.style.fontSize = fontSteps[fontIdx] + 'px';
+  $('#fontToggle').textContent = fontLabels[fontIdx];
+  localStorage.setItem('df-font', fontIdx);
+}
+applyFont();
+$('#fontToggle').onclick = () => {
+  fontIdx = (fontIdx + 1) % fontSteps.length;
+  applyFont();
+};
+
+// User dropdown
+$('#userBtn').onclick = e => { e.stopPropagation(); $('#userDrop').classList.toggle('hidden'); };
+document.addEventListener('click', () => $('#userDrop').classList.add('hidden'));
+
+// Tabs
+$$('.tab-btn').forEach(b => b.onclick = () => {
+  $$('.tab-btn').forEach(x => {
+    x.classList.remove('bg-white','dark:bg-navy','shadow-sm','text-navy','dark:text-mint');
+    x.classList.add('text-slate','dark:text-sage-light');
+  });
+  b.classList.remove('text-slate','dark:text-sage-light');
+  b.classList.add('bg-white','dark:bg-navy','shadow-sm','text-navy','dark:text-mint');
+  $$('.view-panel').forEach(p => { p.classList.add('hidden'); p.style.opacity = ''; p.style.transition = ''; p.style.transform = ''; });
+  const view = b.dataset.tab === 'list' ? $('#listView') : $('#kanbanView');
+  view.classList.remove('hidden');
+  view.style.opacity = '0';
+  view.style.transform = 'translateY(4px)';
+  requestAnimationFrame(() => {
+    view.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+    view.style.opacity = '1';
+    view.style.transform = 'translateY(0)';
+  });
+  render();
+});
+
+// Modal
+function openModal(st) {
+  $('#fEditId').value = '';
+  $('#modalTitle').textContent = 'New Task';
+  $('#fSubmit').textContent = 'Add Task';
+  $('#fDelete').classList.add('hidden');
+  $('#taskForm').reset();
+  selTags = [];
+  syncTags();
+  if (st) $('#fStatus').value = st;
+  $('#fDescPreview').classList.add('hidden');
+  $('#fDesc').classList.remove('hidden');
+  $('#mdPreviewBtn').textContent = 'Preview';
+  $('#modalBg').classList.remove('hidden');
+  setTimeout(() => $('#fTitle').focus(), 150);
+}
+
+// Description preview overlay
+function openDescPreview(id) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  $('#descOverlayTitle').textContent = t.title;
+  $('#descOverlayContent').innerHTML = md(t.description) || '<span class="text-slate/40 dark:text-sage-dark/40 italic">No description</span>';
+  $('#descOverlay').dataset.taskId = id;
+  $('#descOverlay').classList.remove('hidden');
+}
+$('#descOverlayClose').onclick = () => { $('#descOverlay').classList.add('hidden'); };
+$('#descOverlayClose2').onclick = () => { $('#descOverlay').classList.add('hidden'); };
+$('#descOverlayEdit').onclick = () => {
+  const id = parseInt($('#descOverlay').dataset.taskId);
+  $('#descOverlay').classList.add('hidden');
+  openEdit(id);
+};
+$('#descOverlay').onclick = e => { if (e.target === $('#descOverlay')) $('#descOverlay').classList.add('hidden'); };
+
+function openEdit(id) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  $('#fEditId').value = id;
+  $('#modalTitle').textContent = 'Edit Task';
+  $('#fSubmit').textContent = 'Save';
+  $('#fDelete').classList.remove('hidden');
+  if (t.archived) {
+    $('#fDelete').innerHTML = 'Restore';
+  } else {
+    $('#fDelete').innerHTML = '<svg class="inline -mt-px mr-1" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1H4a2 2 0 0 0-1 1v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><path d="M7 7V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3"/></svg>Archive';
+  }
+  $('#fTitle').value = t.title;
+  $('#fDesc').value = t.description || '';
+  $('#fProject').value = t.project || '';
+  $('#fStatus').value = t.status;
+  $('#fDueDate').value = t.due_date || '';
+  selTags = [...(t.tags || [])];
+  syncTags();
+  $('#fDescPreview').classList.add('hidden');
+  $('#fDesc').classList.remove('hidden');
+  $('#mdPreviewBtn').textContent = 'Preview';
+  $('#modalBg').classList.remove('hidden');
+  setTimeout(() => $('#fTitle').focus(), 150);
+}
+
+function closeModal() { $('#modalBg').classList.add('hidden'); }
+$('#modalClose').onclick = closeModal;
+$('#fCancelBtn').onclick = closeModal;
+$('#modalBg').onclick = e => { if (e.target === $('#modalBg')) closeModal(); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); $('#descOverlay').classList.add('hidden'); } });
+
+// Markdown preview toggle
+$('#mdPreviewBtn').onclick = () => {
+  const preview = $('#fDescPreview');
+  const textarea = $('#fDesc');
+  const btn = $('#mdPreviewBtn');
+  const isHidden = preview.style.display === 'none' || preview.classList.contains('hidden');
+  if (isHidden) {
+    preview.innerHTML = md(textarea.value) || '<span class="text-slate/40 dark:text-sage-dark/40 italic">No description</span>';
+    preview.classList.remove('hidden');
+    preview.style.display = '';
+    textarea.style.display = 'none';
+    btn.textContent = 'Edit';
+  } else {
+    preview.classList.add('hidden');
+    preview.style.display = 'none';
+    textarea.style.display = '';
+    btn.textContent = 'Preview';
+  }
+};
+$('#addBtn').onclick = () => openModal('todo');
+
+// Archive/unarchive from modal
+$('#fDelete').onclick = async () => {
+  const id = parseInt($('#fEditId').value);
+  if (!id) return;
+  const t = tasks.find(x => x.id === id);
+  if (t && t.archived) {
+    await api(`/tasks/${id}`, { method: 'PUT', body: JSON.stringify({ archived: false }) });
+    closeModal();
+    toast('Task restored');
+  } else {
+    await api(`/tasks/${id}`, { method: 'PUT', body: JSON.stringify({ archived: true }) });
+    closeModal();
+    toast('Task archived');
+  }
+  if (showingArchived) {
+    await loadArchived();
+  } else {
+    await loadTasks();
+  }
+  render();
+};
+
+// Kanban Add buttons
+$$('[data-add-status]').forEach(btn => {
+  btn.onclick = () => openModal(btn.dataset.addStatus);
+});
+
+// Tags
+$$('.tag-opt').forEach(b => b.onclick = () => {
+  const t = b.dataset.tag;
+  selTags = selTags.includes(t) ? selTags.filter(x => x !== t) : [...selTags, t];
+  syncTags();
+});
+
+function syncTags() {
+  $$('.tag-opt').forEach(b => {
+    const on = selTags.includes(b.dataset.tag);
+    b.classList.toggle('bg-sage/15', on);
+    b.classList.toggle('dark:bg-sage/15', on);
+    b.classList.toggle('border-sage', on);
+    b.classList.toggle('dark:border-sage', on);
+    b.classList.toggle('text-navy', on);
+    b.classList.toggle('dark:text-sage', on);
+    if (!on) {
+      b.classList.add('bg-mint/60','dark:bg-navy-lighter/40','border-sage-pale','dark:border-navy-lighter/40','text-slate','dark:text-sage-light');
+    } else {
+      b.classList.remove('bg-mint/60','dark:bg-navy-lighter/40','border-sage-pale','dark:border-navy-lighter/40','text-slate','dark:text-sage-light');
+    }
+  });
+}
+
+// Form
+$('#taskForm').onsubmit = async e => {
+  e.preventDefault();
+  const title = $('#fTitle').value.trim();
+  if (!title) return;
+  const eid = $('#fEditId').value;
+  const payload = {
+    title,
+    description: $('#fDesc').value.trim(),
+    status: $('#fStatus').value,
+    tags: [...selTags],
+    project: $('#fProject').value.trim(),
+    due_date: $('#fDueDate').value,
+  };
+  try {
+    if (eid) {
+      await api(`/tasks/${eid}`, { method: 'PUT', body: JSON.stringify(payload) });
+      toast('Task updated');
+    } else {
+      await api('/tasks', { method: 'POST', body: JSON.stringify(payload) });
+      toast('Task added');
+    }
+    closeModal();
+    await loadTasks();
+    render();
+  } catch (err) {
+    toast('Error: ' + err.message);
+  }
+};
+
+// Actions
+async function toggleDone(id) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  const newStatus = t.done ? 'todo' : 'done';
+  await api(`/tasks/${id}`, { method: 'PUT', body: JSON.stringify({ status: newStatus }) });
+  await loadTasks();
+  render();
+}
+
+async function archive(id) {
+  await api(`/tasks/${id}`, { method: 'PUT', body: JSON.stringify({ archived: true }) });
+  toast('Task archived');
+  await loadTasks();
+  render();
+}
+
+async function unarchive(id) {
+  await api(`/tasks/${id}`, { method: 'PUT', body: JSON.stringify({ archived: false }) });
+  toast('Task restored');
+  if (showingArchived) {
+    await loadArchived();
+  } else {
+    await loadTasks();
+  }
+  render();
+}
+
+// Archived view
+let showingArchived = false;
+$('#clearAllBtn').onclick = async () => {
+  showingArchived = !showingArchived;
+  const btn = $('#clearAllBtn');
+  if (showingArchived) {
+    btn.classList.add('bg-sage/15', 'border', 'border-sage', 'rounded-lg');
+    await loadArchived();
+  } else {
+    btn.classList.remove('bg-sage/15', 'border', 'border-sage', 'rounded-lg');
+    await loadTasks();
+  }
+  render();
+};
+
+async function loadArchived() {
+  try {
+    const res = await api('/tasks?archived=true');
+    tasks = await res.json();
+  } catch (e) {
+    tasks = [];
+  }
+}
+
+// Filter
+$('#filterToggle').onclick = () => {
+  const bar = $('#filterBar');
+  bar.classList.toggle('hidden');
+  if (!bar.classList.contains('hidden')) {
+    renderFilterTags();
+    renderActivePills();
+  }
+};
+
+$('#tagDropdownBtn').onclick = (e) => {
+  e.stopPropagation();
+  const dd = $('#tagDropdown');
+  dd.classList.toggle('hidden');
+  if (!dd.classList.contains('hidden')) renderFilterTags();
+};
+document.addEventListener('click', () => $('#tagDropdown').classList.add('hidden'));
+
+$('#filterClear').onclick = async () => {
+  activeFilters = { tags: [], date: '', project: '' };
+  $('#filterDate').value = '';
+  $('#filterProject').value = '';
+  await loadTasks();
+  render();
+  renderActivePills();
+};
+
+$('#filterDate').onchange = $('#filterDate').oninput = async () => {
+  activeFilters.date = $('#filterDate').value;
+  await loadTasks();
+  render();
+};
+
+$('#filterProject').onchange = $('#filterProject').oninput = async () => {
+  activeFilters.project = $('#filterProject').value.trim().toLowerCase();
+  await loadTasks();
+  render();
+};
+
+function renderFilterTags() {
+  const el = $('#tagDropdown');
+  const allTags = [...new Set(tasks.flatMap(t => t.tags || []))];
+  el.innerHTML = allTags.map(t => {
+    const active = activeFilters.tags.includes(t);
+    return `<button data-filter-tag="${t}" class="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors
+      ${active ? 'bg-sage/15 text-navy dark:text-sage' : 'text-slate dark:text-sage-light hover:bg-mint/50 dark:hover:bg-navy-lighter/50'}">
+      <span class="w-3 h-3 rounded border ${active ? 'bg-sage border-sage' : 'border-sage-pale dark:border-navy-lighter'} flex items-center justify-center">
+        ${active ? '<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : ''}
+      </span>
+      ${t.charAt(0).toUpperCase() + t.slice(1)}
+    </button>`;
+  }).join('');
+  el.querySelectorAll('[data-filter-tag]').forEach(btn => {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      const tag = btn.dataset.filterTag;
+      if (activeFilters.tags.includes(tag)) {
+        activeFilters.tags = activeFilters.tags.filter(t => t !== tag);
+      } else {
+        activeFilters.tags.push(tag);
+      }
+      await loadTasks();
+      render();
+      renderFilterTags();
+      renderActivePills();
+    };
+  });
+}
+
+function renderActivePills() {
+  const el = $('#activeTagPills');
+  if (!activeFilters.tags.length) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = activeFilters.tags.map(t =>
+    `<span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-sage/15 text-navy dark:text-sage border border-sage/30 dark:border-sage/30 flex items-center gap-1">
+      ${t.charAt(0).toUpperCase() + t.slice(1)}
+      <button data-remove-tag="${t}" class="hover:text-red-400 transition-colors cursor-pointer">&times;</button>
+    </span>`
+  ).join('');
+  el.querySelectorAll('[data-remove-tag]').forEach(btn => {
+    btn.onclick = async () => {
+      activeFilters.tags = activeFilters.tags.filter(t => t !== btn.dataset.removeTag);
+      await loadTasks();
+      render();
+      renderFilterTags();
+      renderActivePills();
+    };
+  });
+}
+
+// Tag rendering in cards
+const tagColors = {
+  work: 'bg-sage/12 text-slate-dark dark:bg-sage/12 dark:text-sage',
+  personal: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
+  urgent: 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+  idea: 'bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300',
+};
+const tagLabels = { work: 'Work', personal: 'Personal', urgent: 'Urgent', idea: 'Idea' };
+function tagH(t) { return `<span class="text-[10px] font-medium px-2 py-0.5 rounded-full ${tagColors[t] || ''}">${tagLabels[t] || t}</span>`; }
+
+// Load tasks
+async function loadTasks() {
+  let url = '/tasks';
+  const params = [];
+  if (activeFilters.date) params.push(`date=${activeFilters.date}`);
+  if (activeFilters.tags.length === 1) params.push(`tag=${activeFilters.tags[0]}`);
+  const suffix = params.length ? '?' + params.join('&') : '';
+  try {
+    const res = await api(url + suffix);
+    tasks = await res.json();
+    // Client-side multi-tag filter
+    if (activeFilters.tags.length > 0) {
+      tasks = tasks.filter(t => activeFilters.tags.some(tag => (t.tags || []).includes(tag)));
+    }
+    // Client-side project filter
+    if (activeFilters.project) {
+      tasks = tasks.filter(t => (t.project || '').toLowerCase().includes(activeFilters.project));
+    }
+  } catch (e) {
+    tasks = [];
+  }
+}
+
+// Render
+function render() {
+  $('#totalCount').textContent = tasks.length;
+  const badge = $('#archivedBadge');
+  if (showingArchived) {
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+
+  let filtered = tasks;
+
+  // List
+  const sorted = [...filtered].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return (a.sort_order || 0) - (b.sort_order || 0);
+  });
+  const todoListEl = $('#todoList');
+  if (!sorted.length) {
+    todoListEl.innerHTML = `
+      <div class="flex flex-col items-center py-16 text-slate dark:text-sage-dark">
+        ${ICONS.empty}
+        <p class="text-sm mb-4">No tasks yet</p>
+        <button onclick="openModal('todo')" class="text-xs font-medium px-4 py-2 rounded-lg bg-sage text-navy hover:bg-sage-dark transition-colors cursor-pointer">
+          <svg class="inline -mt-px mr-1" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          New Task</button>
+      </div>`;
+  } else {
+    todoListEl.innerHTML = sorted.map((t, i) => {
+      const isNew = !seenIds.has(t.id);
+      seenIds.add(t.id);
+      const actionFn = showingArchived ? 'unarchive' : 'archive';
+    const actionLabel = showingArchived ? 'Restore' : 'Archive';
+    return `
+      <div draggable="true" data-list-id="${t.id}" ondblclick="openEdit(${t.id})" class="${isNew ? 'fade-up' : ''} group flex items-center gap-3 px-3.5 py-3 rounded-xl card-lift
+        bg-white dark:bg-navy-light border border-sage-pale/60 dark:border-navy-lighter/30
+        hover:shadow-sm hover:shadow-sage/8 dark:hover:shadow-lg dark:hover:shadow-black/20
+        mb-1.5 ${t.done ? 'opacity-50' : ''} ${t.archived ? 'opacity-60' : ''}" style="animation-delay:${i * 30}ms">
+        <span class="flex-shrink-0 cursor-grab text-slate/30 dark:text-sage-dark/30 group-hover:text-slate/50 dark:group-hover:text-sage-light/50 transition-colors" title="Drag to reorder">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="6" r="2"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="8" cy="18" r="2"/><circle cx="16" cy="18" r="2"/></svg>
+        </span>
+        <label class="relative flex-shrink-0 w-[18px] h-[18px] cursor-pointer">
+          <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleDone(${t.id})" class="sr-only peer" />
+          <div class="cb-visual w-[18px] h-[18px] rounded-md border-2 border-sage-pale dark:border-navy-lighter
+            peer-checked:bg-sage peer-checked:border-sage flex items-center justify-center
+            peer-checked:shadow-sm peer-checked:shadow-sage/25">
+            <svg class="${t.done ? 'opacity-100 scale-100' : 'opacity-0 scale-50'} transition-all" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+          </div>
+        </label>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-medium leading-snug text-navy dark:text-mint ${t.done ? 'line-through text-slate dark:text-sage-dark' : ''}">${esc(t.title)}</div>
+          ${t.description && !t.done ? `<div class="desc-preview text-xs text-slate/60 dark:text-sage-dark/60 mt-0.5 cursor-pointer" onclick="openDescPreview(${t.id})">${descPreview(t.description)}</div>` : ''}
+          <div class="flex items-center gap-2 mt-0.5 text-[10px] text-slate/50 dark:text-sage-dark/50">
+            <span>${fmtDate(t.created_at)}</span>
+            ${t.due_date ? `<span class="flex items-center gap-0.5"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Due ${fmtDate(t.due_date)}</span>` : ''}
+            ${t.project ? `<span class="px-1.5 py-0.5 rounded bg-sage/10 dark:bg-sage/15">${esc(t.project)}</span>` : ''}
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5 flex-shrink-0">
+          <div class="hidden sm:flex gap-1">${(t.tags || []).map(tagH).join('')}</div>
+          <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity sm:ml-1">
+            <button onclick="openEdit(${t.id})" aria-label="Edit"
+              class="w-7 h-7 rounded-lg flex items-center justify-center text-[11px]
+              text-slate dark:text-sage-dark hover:bg-mint dark:hover:bg-navy-lighter/50
+              transition-colors cursor-pointer">${ICONS.edit}</button>
+            <button onclick="${actionFn}(${t.id})" aria-label="${actionLabel}"
+              class="w-7 h-7 rounded-lg flex items-center justify-center text-[11px]
+              text-slate dark:text-sage-dark hover:bg-mint dark:hover:bg-navy-lighter/50
+              transition-colors cursor-pointer">${ICONS.archive}</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Kanban
+  const byStatus = s => filtered.filter(t => t.status === s);
+  $('#cTodo').textContent = byStatus('todo').length;
+  $('#cProg').textContent = byStatus('progress').length;
+  $('#cDone').textContent = byStatus('done').length;
+
+  const kCard = (t, i) => {
+    const isNew = !seenIds.has(t.id);
+    seenIds.add(t.id);
+    const actionFn = showingArchived ? 'unarchive' : 'archive';
+    const actionLabel = showingArchived ? 'Restore' : 'Archive';
+    const borderColor = {todo: 'border-t-amber-400', progress: 'border-t-sage', done: 'border-t-emerald-400'};
+    return `
+    <div ondblclick="openEdit(${t.id})" class="${isNew ? 'fade-up' : ''} kanban-card card-lift rounded-xl p-3 cursor-grab border-t-2 ${borderColor[t.status] || 'border-t-sage'}
+      bg-white dark:bg-navy border border-sage-pale/60 dark:border-navy-lighter/30
+      hover:shadow-sm hover:shadow-sage/8 dark:hover:shadow-lg dark:hover:shadow-black/20 ${t.archived ? 'opacity-60' : ''}"
+      draggable="true" data-id="${t.id}" style="${isNew ? `animation-delay:${i * 40}ms` : ''}">
+      <div class="text-sm font-semibold leading-snug text-navy dark:text-mint mb-1">${esc(t.title)}</div>
+      ${t.description ? `<div class="desc-preview text-xs text-slate/60 dark:text-sage-dark/50 mb-2 leading-relaxed cursor-pointer" onclick="openDescPreview(${t.id})">${descPreview(t.description)}</div>` : ''}
+      <div class="flex items-center gap-2 text-[10px] text-slate/50 dark:text-sage-dark/50 mb-2">
+        <span>${fmtDate(t.created_at)}</span>
+        ${t.due_date ? `<span class="flex items-center gap-0.5"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Due ${fmtDate(t.due_date)}</span>` : ''}
+        ${t.project ? `<span class="px-1.5 py-0.5 rounded bg-sage/10 dark:bg-sage/15">${esc(t.project)}</span>` : ''}
+      </div>
+      <div class="flex items-center justify-between">
+        <div class="flex gap-1 flex-wrap">${(t.tags || []).map(tagH).join('')}</div>
+        <div class="flex gap-0.5 opacity-0 group-hover:opacity-100"
+          onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0">
+          <button onclick="openEdit(${t.id})" aria-label="Edit"
+            class="w-6 h-6 rounded-md flex items-center justify-center text-[10px]
+            text-slate dark:text-sage-dark hover:bg-mint dark:hover:bg-navy-lighter/50
+            transition-colors cursor-pointer">${ICONS.edit}</button>
+          <button onclick="${actionFn}(${t.id})" aria-label="${actionLabel}"
+            class="w-6 h-6 rounded-md flex items-center justify-center text-[10px]
+            text-slate dark:text-sage-dark hover:bg-mint dark:hover:bg-navy-lighter/50
+            transition-colors cursor-pointer">${ICONS.archive}</button>
+        </div>
+      </div>
+    </div>`;
+  };
+
+  $('#kTodo').innerHTML = byStatus('todo').map(kCard).join('');
+  $('#kProg').innerHTML = byStatus('progress').map(kCard).join('');
+  $('#kDone').innerHTML = byStatus('done').map(kCard).join('');
+
+  initDrag();
+  initListDrag();
+
+  if (window.innerWidth < 768) {
+    $$('.kanban-card .flex.gap-0\\.5').forEach(a => a.style.opacity = '1');
+  }
+
+  if (!$('#filterBar').classList.contains('hidden')) {
+    renderFilterTags();
+    renderActivePills();
+  }
+
+  // Populate project datalist
+  const projects = [...new Set(tasks.map(t => t.project).filter(Boolean))];
+  const dl = $('#projectList');
+  if (dl) dl.innerHTML = projects.map(p => `<option value="${esc(p)}">`).join('');
+}
+
+// Drag & Drop
+function initDrag() {
+  $$('.kanban-card').forEach(c => {
+    c.addEventListener('dragstart', e => {
+      dragCard = c;
+      c.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', c.dataset.id);
+    });
+    c.addEventListener('dragend', () => {
+      c.classList.remove('dragging');
+      dragCard = null;
+      $$('.col-drop').forEach(x => x.classList.remove('drag-over'));
+    });
+  });
+}
+
+function initColDrop() {
+  $$('.col-drop').forEach(col => {
+    const zone = col.querySelector('[id^="k"]');
+    if (!zone) return;
+    zone.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      col.classList.add('drag-over');
+    });
+    zone.addEventListener('dragleave', e => {
+      if (!zone.contains(e.relatedTarget)) col.classList.remove('drag-over');
+    });
+    zone.addEventListener('drop', async e => {
+      e.preventDefault();
+      col.classList.remove('drag-over');
+      if (!dragCard) return;
+      const id = parseInt(dragCard.dataset.id);
+      const ns = col.dataset.status;
+      try {
+        await api(`/tasks/${id}`, { method: 'PUT', body: JSON.stringify({ status: ns }) });
+        const label = ns === 'todo' ? 'To Do' : ns === 'progress' ? 'In Progress' : 'Done';
+        toast(`Moved to ${label}`);
+      } catch (err) {
+        toast('Error moving task');
+      }
+      await loadTasks();
+      render();
+    });
+  });
+}
+initColDrop();
+
+// List drag reorder
+let listDragItem = null;
+function initListDrag() {
+  const items = $$('[data-list-id]');
+  items.forEach(item => {
+    item.addEventListener('dragstart', e => {
+      listDragItem = item;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', item.dataset.listId);
+    });
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      listDragItem = null;
+      $$('[data-list-id]').forEach(el => el.classList.remove('border-t-2', 'border-sage'));
+    });
+    item.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (listDragItem && listDragItem !== item) {
+        const rect = item.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        if (e.clientY < midY) {
+          item.parentNode.insertBefore(listDragItem, item);
+        } else {
+          item.parentNode.insertBefore(listDragItem, item.nextSibling);
+        }
+      }
+    });
+    item.addEventListener('drop', async e => {
+      e.preventDefault();
+      if (!listDragItem) return;
+      const order = [...$$('[data-list-id]')].map(el => parseInt(el.dataset.listId));
+      try {
+        await api('/tasks/reorder', { method: 'PUT', body: JSON.stringify(order) });
+        toast('Reordered');
+      } catch (err) {
+        toast('Error reordering');
+      }
+      await loadTasks();
+      render();
+    });
+  });
+}
+
+// Toast
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast-item flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium shadow-lg bg-navy dark:bg-sage text-mint dark:text-navy';
+  el.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>${msg}`;
+  $('#toasts').appendChild(el);
+  setTimeout(() => { if (el.parentNode) el.remove(); }, 3000);
+}
+
+// Init
+async function init() {
+  await loadTasks();
+  render();
+}
+init();
+</script>
+</Layout>
