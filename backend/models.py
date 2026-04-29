@@ -39,3 +39,32 @@ class TaskOut(BaseModel):
     due_date: str
     created_at: str
     updated_at: str
+
+
+class EntityOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: str
+    name: str
+    type: str
+    properties: str
+    created_at: str
+
+
+class TripleOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    subject: str
+    predicate: str
+    object: str
+    valid_from: str
+    valid_to: str | None
+    confidence: float
+    source_task_id: int | None
+    created_at: str
+
+
+class GraphData(BaseModel):
+    nodes: list[EntityOut]
+    edges: list[TripleOut]

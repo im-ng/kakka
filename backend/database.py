@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import Integer, String, Text, Boolean, event
+from sqlalchemy import Integer, String, Text, Boolean, Float, event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -32,6 +32,30 @@ class Task(Base):
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[str] = mapped_column(String, nullable=False)
     updated_at: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class Entity(Base):
+    __tablename__ = "entities"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    type: Mapped[str] = mapped_column(String(20), nullable=False)
+    properties: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class Triple(Base):
+    __tablename__ = "triples"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subject: Mapped[str] = mapped_column(String, nullable=False)
+    predicate: Mapped[str] = mapped_column(String(50), nullable=False)
+    object: Mapped[str] = mapped_column(String, nullable=False)
+    valid_from: Mapped[str] = mapped_column(String, nullable=False)
+    valid_to: Mapped[str] = mapped_column(String, nullable=True)
+    confidence: Mapped[float] = mapped_column(Float, default=1.0)
+    source_task_id: Mapped[int] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
 
 
 @event.listens_for(Task, "before_insert")

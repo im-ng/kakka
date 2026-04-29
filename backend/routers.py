@@ -7,8 +7,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import Task, async_session
+from database import Task, Entity, Triple, async_session
 from models import TaskCreate, TaskUpdate
+from kg_sync import sync_task_to_graph, sync_task_update_graph, sync_task_delete_graph
 
 
 router = APIRouter(prefix="/api")
@@ -81,6 +82,8 @@ async def create_task(body: TaskCreate, db: AsyncSession = Depends(get_db)):
     db.add(task)
     await db.commit()
     await db.refresh(task)
+    await sync_task_to_graph(task, db)
+    await db.commit()
     return task_to_dict(task)
 
 
@@ -97,12 +100,18 @@ async def reorder_tasks(body: list[int], db: AsyncSession = Depends(get_db)):
 
 @router.put("/tasks/{task_id}")
 async def update_task(
-    task_id: int, body: TaskUpdate, db: AsyncSession = Depends(get_db)
+    task_id: int,
+    body: TaskUpdate,
+    db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(Task).where(Task.id == task_id))
     task = result.scalar_one_or_none()
     if not task:
         return JSONResponse(status_code=404, content={"detail": "Task not found"})
+
+    old_tags = json.loads(task.tags) if task.tags else []
+    old_grp = task.grp or ""
+    old_status = task.status
 
     if body.title is not None:
         task.title = body.title
@@ -125,6 +134,9 @@ async def update_task(
     task.updated_at = datetime.now(timezone.utc).isoformat()
     await db.commit()
     await db.refresh(task)
+
+    await sync_task_update_graph(old_tags, old_grp, old_status, task, db)
+    await db.commit()
     return task_to_dict(task)
 
 
@@ -134,6 +146,7 @@ async def delete_task(task_id: int, db: AsyncSession = Depends(get_db)):
     task = result.scalar_one_or_none()
     if not task:
         return JSONResponse(status_code=404, content={"detail": "Task not found"})
+    await sync_task_delete_graph(task_id, db)
     await db.delete(task)
     await db.commit()
     return {"ok": True}
@@ -148,3 +161,156 @@ async def list_tags(db: AsyncSession = Depends(get_db)):
         for tag in json.loads(t):
             tags_set.add(tag)
     return sorted(tags_set)
+
+
+# --- Knowledge Graph endpoints ---
+
+
+@router.get("/graph")
+async def get_graph(db: AsyncSession = Depends(get_db)):
+    nodes = (await db.execute(select(Entity))).scalars().all()
+    edges = (
+        (await db.execute(select(Triple).where(Triple.valid_to.is_(None))))
+        .scalars()
+        .all()
+    )
+    return {
+        "nodes": [
+            {
+                "id": n.id,
+                "name": n.name,
+                "type": n.type,
+                "properties": n.properties,
+                "created_at": n.created_at,
+            }
+            for n in nodes
+        ],
+        "edges": [
+            {
+                "id": e.id,
+                "subject": e.subject,
+                "predicate": e.predicate,
+                "object": e.object,
+                "valid_from": e.valid_from,
+                "valid_to": e.valid_to,
+                "confidence": e.confidence,
+                "source_task_id": e.source_task_id,
+                "created_at": e.created_at,
+            }
+            for e in edges
+        ],
+    }
+
+
+@router.get("/graph/stats")
+async def get_graph_stats(db: AsyncSession = Depends(get_db)):
+    entity_count = (await db.execute(select(func.count()).select_from(Entity))).scalar()
+    triple_count = (await db.execute(select(func.count()).select_from(Triple))).scalar()
+    current_count = (
+        await db.execute(
+            select(func.count()).select_from(Triple).where(Triple.valid_to.is_(None))
+        )
+    ).scalar()
+    expired_count = triple_count - current_count
+
+    pred_counts = {}
+    result = await db.execute(
+        select(Triple.predicate, func.count())
+        .where(Triple.valid_to.is_(None))
+        .group_by(Triple.predicate)
+    )
+    for row in result:
+        pred_counts[row[0]] = row[1]
+
+    return {
+        "entities": entity_count,
+        "triples": triple_count,
+        "current_facts": current_count,
+        "expired_facts": expired_count,
+        "relationship_types": pred_counts,
+    }
+
+
+@router.get("/graph/entity/{entity_id}")
+async def get_entity(entity_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Entity).where(Entity.id == entity_id))
+    entity = result.scalar_one_or_none()
+    if not entity:
+        return JSONResponse(status_code=404, content={"detail": "Entity not found"})
+
+    outgoing = (
+        (
+            await db.execute(
+                select(Triple).where(
+                    Triple.subject == entity_id, Triple.valid_to.is_(None)
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    incoming = (
+        (
+            await db.execute(
+                select(Triple).where(
+                    Triple.object == entity_id, Triple.valid_to.is_(None)
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    def triple_dict(t: Triple) -> dict:
+        return {
+            "id": t.id,
+            "subject": t.subject,
+            "predicate": t.predicate,
+            "object": t.object,
+            "valid_from": t.valid_from,
+            "valid_to": t.valid_to,
+            "confidence": t.confidence,
+            "source_task_id": t.source_task_id,
+            "created_at": t.created_at,
+        }
+
+    return {
+        "entity": {
+            "id": entity.id,
+            "name": entity.name,
+            "type": entity.type,
+            "properties": entity.properties,
+            "created_at": entity.created_at,
+        },
+        "outgoing": [triple_dict(t) for t in outgoing],
+        "incoming": [triple_dict(t) for t in incoming],
+    }
+
+
+@router.get("/graph/timeline/{entity_id}")
+async def get_timeline(entity_id: str, db: AsyncSession = Depends(get_db)):
+    triples = (
+        (
+            await db.execute(
+                select(Triple)
+                .where((Triple.subject == entity_id) | (Triple.object == entity_id))
+                .order_by(Triple.valid_from)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return {
+        "entity_id": entity_id,
+        "timeline": [
+            {
+                "subject": t.subject,
+                "predicate": t.predicate,
+                "object": t.object,
+                "valid_from": t.valid_from,
+                "valid_to": t.valid_to,
+                "current": t.valid_to is None,
+            }
+            for t in triples
+        ],
+    }

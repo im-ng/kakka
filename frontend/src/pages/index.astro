@@ -58,6 +58,11 @@ import Layout from '../layouts/Layout.astro'
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         Kanban
       </button>
+      <button data-tab="graph" class="tab-btn text-xs font-medium px-4 py-2 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer
+        text-slate dark:text-sage-light">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><line x1="5" y1="8" x2="12" y2="16"/><line x1="19" y1="8" x2="12" y2="16"/><line x1="7" y1="6" x2="17" y2="6"/></svg>
+        Graph
+      </button>
     </div>
     <div class="sm:ml-auto flex items-center gap-3">
       <span class="text-[11px] font-medium text-slate dark:text-sage-dark">
@@ -186,6 +191,17 @@ import Layout from '../layouts/Layout.astro'
           </button>
         </div>
       </div>
+    </section>
+
+    <!-- Graph View -->
+    <section id="graphView" class="view-panel hidden flex-1 min-h-0 overflow-hidden w-full">
+      <div class="flex items-center gap-2 mb-3">
+        <span id="graphStats" class="text-[11px] font-medium text-slate dark:text-sage-dark">
+          <span id="entityCount" class="text-navy dark:text-sage font-semibold">0</span> entities ·
+          <span id="edgeCount" class="text-navy dark:text-sage font-semibold">0</span> connections
+        </span>
+      </div>
+      <div id="graphContainer" class="rounded-2xl border border-sage-pale/60 dark:border-navy-lighter/30 bg-white dark:bg-navy-light" style="height: calc(100% - 24px); min-height: 400px;"></div>
     </section>
   </main>
 
@@ -460,7 +476,8 @@ $$('.tab-btn').forEach(b => b.onclick = () => {
   b.classList.remove('text-slate','dark:text-sage-light');
   b.classList.add('bg-white','dark:bg-navy','shadow-sm','text-navy','dark:text-mint');
   $$('.view-panel').forEach(p => { p.classList.add('hidden'); p.style.opacity = ''; p.style.transition = ''; p.style.transform = ''; });
-  const view = b.dataset.tab === 'list' ? $('#listView') : $('#kanbanView');
+  const tab = b.dataset.tab;
+  const view = tab === 'list' ? $('#listView') : tab === 'kanban' ? $('#kanbanView') : $('#graphView');
   view.classList.remove('hidden');
   view.style.opacity = '0';
   view.style.transform = 'translateY(4px)';
@@ -469,7 +486,8 @@ $$('.tab-btn').forEach(b => b.onclick = () => {
     view.style.opacity = '1';
     view.style.transform = 'translateY(0)';
   });
-  render();
+  if (tab === 'graph') loadGraph();
+  else render();
 });
 
 // Modal
@@ -1047,6 +1065,88 @@ function initListDrag() {
       await loadTasks();
       render();
     });
+  });
+}
+
+// Knowledge Graph
+let network = null;
+let graphData = null;
+
+const typeColors = {
+  tag: { bg: '#FBBF24', border: '#D97706', text: '#78350F' },
+  project: { bg: '#34D399', border: '#059669', text: '#FFFFFF' },
+  task: { bg: '#A1C2BD', border: '#7FA8A2', text: '#19183B' },
+  concept: { bg: '#708993', border: '#5A717B', text: '#FFFFFF' },
+};
+const typeColorsDark = {
+  tag: { bg: '#92400E', border: '#FBBF24', text: '#FBBF24' },
+  project: { bg: '#065F46', border: '#34D399', text: '#34D399' },
+  task: { bg: '#22214A', border: '#A1C2BD', text: '#E7F2EF' },
+  concept: { bg: '#19183B', border: '#708993', text: '#708993' },
+};
+
+async function loadGraph() {
+  try {
+    const res = await api('/graph');
+    graphData = await res.json();
+    renderGraph();
+    $('#entityCount').textContent = graphData.nodes.length;
+    $('#edgeCount').textContent = graphData.edges.length;
+  } catch (e) {
+    toast('Error loading graph');
+  }
+}
+
+function renderGraph() {
+  const container = document.getElementById('graphContainer');
+  if (!container || !graphData) return;
+  const isDark = document.documentElement.classList.contains('dark');
+  const colors = isDark ? typeColorsDark : typeColors;
+
+  const nodes = graphData.nodes.map(n => {
+    const c = colors[n.type] || colors.task;
+    const label = n.type === 'task' ? n.name.substring(0, 25) + (n.name.length > 25 ? '...' : '') : n.name;
+    return {
+      id: n.id,
+      label: label,
+      group: n.type,
+      title: `${n.name} (${n.type})`,
+      color: { background: c.bg, border: c.border, highlight: { background: c.bg, border: c.border } },
+      font: { color: c.text, size: n.type === 'task' ? 13 : 12 },
+      shape: n.type === 'task' ? 'box' : 'dot',
+      size: n.type === 'task' ? 20 : 16,
+      borderWidth: n.type === 'task' ? 2 : 1,
+    };
+  });
+
+  const edges = graphData.edges.map(e => ({
+    from: e.subject,
+    to: e.object,
+    label: e.predicate.replace('_', ' '),
+    arrows: 'to',
+    color: { color: isDark ? '#708993' : '#8BA3AC' },
+    font: { size: 9, color: isDark ? '#8BA3AC' : '#5A717B', strokeWidth: 0 },
+    smooth: { type: 'continuous' },
+  }));
+
+  const options = {
+    physics: { stabilization: { iterations: 150 }, barnesHut: { gravitationalConstant: -2000, centralGravity: 0.3, springLength: 120 } },
+    interaction: { hover: true, tooltipDelay: 200, navigationButtons: false, zoomView: true },
+    layout: { improvedLayout: true },
+  };
+
+  if (network) network.destroy();
+  network = new vis.Network(container, { nodes, edges }, options);
+
+  network.on('doubleClick', async params => {
+    if (params.nodes.length > 0) {
+      const nodeId = params.nodes[0];
+      const match = nodeId.match(/^task:(\d+)$/);
+      if (match) {
+        await loadTasks();
+        openEdit(parseInt(match[1]));
+      }
+    }
   });
 }
 
