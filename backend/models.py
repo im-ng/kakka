@@ -68,3 +68,24 @@ class TripleOut(BaseModel):
 class GraphData(BaseModel):
     nodes: list[EntityOut]
     edges: list[TripleOut]
+
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage]
+    model: str = "llama3"
+
+
+class TaskRef(BaseModel):
+    id: int
+    title: str
+    status: str
+
+
+class ChatResponse(BaseModel):
+    content: str
+    tasks: list[TaskRef] = []

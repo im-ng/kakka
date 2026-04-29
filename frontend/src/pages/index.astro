@@ -63,6 +63,11 @@ import Layout from '../layouts/Layout.astro'
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><line x1="5" y1="8" x2="12" y2="16"/><line x1="19" y1="8" x2="12" y2="16"/><line x1="7" y1="6" x2="17" y2="6"/></svg>
         Graph
       </button>
+      <button data-tab="chat" class="tab-btn text-xs font-medium px-4 py-2 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer
+        text-slate dark:text-sage-light">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Chat
+      </button>
     </div>
     <div class="sm:ml-auto flex items-center gap-3">
       <span class="text-[11px] font-medium text-slate dark:text-sage-dark">
@@ -202,6 +207,38 @@ import Layout from '../layouts/Layout.astro'
         </span>
       </div>
       <div id="graphContainer" class="rounded-2xl border border-sage-pale/60 dark:border-navy-lighter/30 bg-white dark:bg-navy-light" style="height: calc(100% - 24px); min-height: 400px;"></div>
+    </section>
+
+    <!-- Chat View -->
+    <section id="chatView" class="view-panel hidden flex-1 min-h-0 overflow-hidden w-full flex flex-col">
+      <div class="flex items-center gap-2 mb-3">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sage dark:text-sage-light"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span class="text-[11px] font-semibold uppercase tracking-wider text-slate dark:text-sage-light">Chat with Kakka</span>
+        <span class="text-[10px] text-slate/50 dark:text-sage-dark/50">· Powered by Ollama</span>
+      </div>
+      <div id="chatMessages" class="flex-1 overflow-y-auto rounded-2xl border border-sage-pale/60 dark:border-navy-lighter/30 bg-white dark:bg-navy-light p-4 flex flex-col gap-3 min-h-0">
+        <div class="flex items-center justify-center h-full text-sm text-slate/40 dark:text-sage-dark/40">
+          <div class="text-center">
+            <svg class="mx-auto mb-3 opacity-30" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <p class="font-medium">Ask Kakka anything</p>
+            <p class="text-xs mt-1">Your tasks and knowledge graph are loaded automatically</p>
+          </div>
+        </div>
+      </div>
+      <div class="mt-3 flex gap-2">
+        <input id="chatInput" type="text" placeholder="Type a message..."
+          class="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none transition-all
+          bg-mint/50 dark:bg-navy-lighter/50 text-navy dark:text-mint
+          border border-sage-pale dark:border-navy-lighter/50
+          focus:border-sage focus:ring-2 focus:ring-sage/15
+          placeholder:text-slate/40 dark:placeholder:text-sage-dark/40" />
+        <button id="chatSend"
+          class="px-4 py-2.5 rounded-xl bg-sage text-navy hover:bg-sage-dark transition-colors cursor-pointer
+          shadow-sm shadow-sage/15 flex items-center gap-1.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Send
+        </button>
+      </div>
     </section>
   </main>
 
@@ -477,7 +514,8 @@ $$('.tab-btn').forEach(b => b.onclick = () => {
   b.classList.add('bg-white','dark:bg-navy','shadow-sm','text-navy','dark:text-mint');
   $$('.view-panel').forEach(p => { p.classList.add('hidden'); p.style.opacity = ''; p.style.transition = ''; p.style.transform = ''; });
   const tab = b.dataset.tab;
-  const view = tab === 'list' ? $('#listView') : tab === 'kanban' ? $('#kanbanView') : $('#graphView');
+  const views = { list: '#listView', kanban: '#kanbanView', graph: '#graphView', chat: '#chatView' };
+  const view = $(views[tab] || '#chatView');
   view.classList.remove('hidden');
   view.style.opacity = '0';
   view.style.transform = 'translateY(4px)';
@@ -487,6 +525,7 @@ $$('.tab-btn').forEach(b => b.onclick = () => {
     view.style.transform = 'translateY(0)';
   });
   if (tab === 'graph') loadGraph();
+  else if (tab === 'chat') {}
   else render();
 });
 
@@ -1149,6 +1188,101 @@ function renderGraph() {
     }
   });
 }
+
+// Chat
+let chatHistory = [];
+let chatLoading = false;
+
+function renderChatMsg(role, content, tasks) {
+  const isUser = role === 'user';
+  const container = $('#chatMessages');
+  const wrapper = document.createElement('div');
+  wrapper.className = isUser ? 'flex justify-end' : 'flex justify-start';
+
+  const bubble = document.createElement('div');
+  bubble.className = isUser
+    ? 'max-w-[80%] px-4 py-2.5 rounded-2xl rounded-br-md text-sm bg-sage text-navy'
+    : 'max-w-[80%] px-4 py-2.5 rounded-2xl rounded-bl-md text-sm bg-mint dark:bg-navy-lighter text-navy dark:text-mint border border-sage-pale/60 dark:border-navy-lighter/30';
+
+  let html = md(content);
+  if (!isUser && tasks && tasks.length) {
+    html += '<div class="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-sage-pale/60 dark:border-navy-lighter/30">';
+    for (const t of tasks) {
+      html += `<button onclick="openEdit(${t.id})" class="text-[10px] font-medium px-2 py-1 rounded-full bg-sage/15 text-navy dark:text-sage border border-sage/30 dark:border-sage/30 hover:bg-sage/25 transition-colors cursor-pointer flex items-center gap-1">
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        #${t.id} ${esc(t.title)}
+      </button>`;
+    }
+    html += '</div>';
+  }
+
+  bubble.innerHTML = html;
+  wrapper.appendChild(bubble);
+  container.appendChild(wrapper);
+}
+
+function scrollChatBottom() {
+  const c = $('#chatMessages');
+  requestAnimationFrame(() => c.scrollTop = c.scrollHeight);
+}
+
+function renderChatLoading() {
+  const container = $('#chatMessages');
+  const wrapper = document.createElement('div');
+  wrapper.className = 'flex justify-start';
+  wrapper.id = 'chatLoadingBubble';
+  wrapper.innerHTML = `<div class="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-bl-md text-sm bg-mint dark:bg-navy-lighter text-navy dark:text-mint border border-sage-pale/60 dark:border-navy-lighter/30">
+    <div class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full bg-sage animate-bounce" style="animation-delay:0ms"></span><span class="inline-block w-2 h-2 rounded-full bg-sage animate-bounce" style="animation-delay:150ms"></span><span class="inline-block w-2 h-2 rounded-full bg-sage animate-bounce" style="animation-delay:300ms"></span></div>
+  </div>`;
+  container.appendChild(wrapper);
+  scrollChatBottom();
+}
+
+function removeChatLoading() {
+  const el = $('#chatLoadingBubble');
+  if (el) el.remove();
+}
+
+async function sendChat() {
+  const input = $('#chatInput');
+  const text = input.value.trim();
+  if (!text || chatLoading) return;
+  input.value = '';
+
+  const emptyPlaceholder = $('#chatMessages .text-center');
+  if (emptyPlaceholder) emptyPlaceholder.closest('.flex.items-center.justify-center')?.remove();
+
+  chatHistory.push({ role: 'user', content: text });
+  renderChatMsg('user', text, null);
+
+  chatLoading = true;
+  $('#chatSend').disabled = true;
+  renderChatLoading();
+
+  try {
+    const res = await fetch(API + '/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: chatHistory }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    chatHistory.push({ role: 'assistant', content: data.content });
+    removeChatLoading();
+    renderChatMsg('assistant', data.content, data.tasks);
+  } catch (err) {
+    removeChatLoading();
+    renderChatMsg('assistant', 'Error: Could not reach Ollama. Make sure it is running on localhost:11434.', []);
+    chatHistory.pop();
+  } finally {
+    chatLoading = false;
+    $('#chatSend').disabled = false;
+    scrollChatBottom();
+  }
+}
+
+$('#chatSend').onclick = sendChat;
+$('#chatInput').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } };
 
 // Toast
 function toast(msg) {
