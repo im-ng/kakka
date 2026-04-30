@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro'
 ---
 
 <Layout>
-<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 flex-1 flex flex-col min-h-0">
+<div id="appShell" class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 flex-1 flex flex-col min-h-0">
 
   <!-- Header -->
   <header class="flex items-center justify-between py-5 border-b z-50
@@ -214,7 +214,7 @@ import Layout from '../layouts/Layout.astro'
       <div class="flex items-center gap-2 mb-3">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sage dark:text-sage-light"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         <span class="text-[11px] font-semibold uppercase tracking-wider text-slate dark:text-sage-light">Chat with Kakka</span>
-        <span class="text-[10px] text-slate/50 dark:text-sage-dark/50">· Powered by Ollama</span>
+        <span class="text-[10px] text-slate/50 dark:text-sage-dark/50">· Knowledge Graph powered</span>
       </div>
       <div id="chatMessages" class="flex-1 overflow-y-auto rounded-2xl border border-sage-pale/60 dark:border-navy-lighter/30 bg-white dark:bg-navy-light p-4 flex flex-col gap-3 min-h-0">
         <div class="flex items-center justify-center h-full text-sm text-slate/40 dark:text-sage-dark/40">
@@ -1205,16 +1205,13 @@ function renderChatMsg(role, content, tasks) {
     : 'max-w-[80%] px-4 py-2.5 rounded-2xl rounded-bl-md text-sm bg-mint dark:bg-navy-lighter text-navy dark:text-mint border border-sage-pale/60 dark:border-navy-lighter/30';
 
   let html = md(content);
-  if (!isUser && tasks && tasks.length) {
-    html += '<div class="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-sage-pale/60 dark:border-navy-lighter/30">';
-    for (const t of tasks) {
-      html += `<button onclick="openEdit(${t.id})" class="text-[10px] font-medium px-2 py-1 rounded-full bg-sage/15 text-navy dark:text-sage border border-sage/30 dark:border-sage/30 hover:bg-sage/25 transition-colors cursor-pointer flex items-center gap-1">
-        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        #${t.id} ${esc(t.title)}
-      </button>`;
-    }
-    html += '</div>';
-  }
+
+  html = html.replace(/\[Task #(\d+)\]\(task:(\d+)\)/g, (match, num, id) => {
+    const t = tasks && tasks.find(x => x.id === parseInt(id));
+    const label = t ? esc(t.title) : `Task #${num}`;
+    const statusBadge = t ? ` · ${t.status}` : '';
+    return `<button onclick="openEdit(${id})" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-sage/20 dark:bg-sage/15 text-navy dark:text-sage border border-sage/30 dark:border-sage/30 hover:bg-sage/35 transition-colors cursor-pointer align-middle mx-0.5"><svg class="inline -mt-px" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>#${num} ${label}</button>`;
+  });
 
   bubble.innerHTML = html;
   wrapper.appendChild(bubble);
@@ -1270,9 +1267,14 @@ async function sendChat() {
     chatHistory.push({ role: 'assistant', content: data.content });
     removeChatLoading();
     renderChatMsg('assistant', data.content, data.tasks);
+    if (data.tasks && data.tasks.some(t => t.changed)) {
+      await loadTasks();
+      render();
+      toast('Tasks updated');
+    }
   } catch (err) {
     removeChatLoading();
-    renderChatMsg('assistant', 'Error: Could not reach Ollama. Make sure it is running on localhost:11434.', []);
+    renderChatMsg('assistant', 'Error: Could not process your query. Please try again.', []);
     chatHistory.pop();
   } finally {
     chatLoading = false;

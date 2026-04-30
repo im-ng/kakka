@@ -10,13 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import Task, Entity, Triple, async_session
 from models import TaskCreate, TaskUpdate, ChatRequest, ChatResponse, TaskRef
 from kg_sync import sync_task_to_graph, sync_task_update_graph, sync_task_delete_graph
-from chat import (
-    build_kg_context,
-    call_ollama,
-    get_kg_context,
-    extract_task_refs,
-    SYSTEM_PROMPT,
-)
+from chat import query_kg
 
 
 router = APIRouter(prefix="/api")
@@ -325,15 +319,6 @@ async def get_timeline(entity_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(body: ChatRequest, db: AsyncSession = Depends(get_db)):
-    entities, triples, all_tasks = await get_kg_context(db)
-    kg_ctx = build_kg_context(entities, triples, all_tasks)
-    system_msg = {"role": "system", "content": SYSTEM_PROMPT + "\n\n" + kg_ctx}
-    messages = [system_msg] + [
-        {"role": m.role, "content": m.content} for m in body.messages
-    ]
-    try:
-        content = await call_ollama(messages, body.model)
-    except Exception as e:
-        return ChatResponse(content=f"Error contacting Ollama: {e}", tasks=[])
-    task_refs = extract_task_refs(content, all_tasks)
+    last_msg = body.messages[-1].content if body.messages else ""
+    content, task_refs, _ = await query_kg(last_msg, db)
     return ChatResponse(content=content, tasks=task_refs)

@@ -2,12 +2,11 @@
 
 _"Kakka"_ — Tamil word for raven/crow. A minimalist task manager with Kanban and Todo list views, dark/light themes, markdown descriptions, and drag-and-drop — all in a self-contained full-stack app.
 
-The idea of this app to build the long term memory and intelligence of the tasks one does. 
+The idea of this app to build the long term memory and intelligence of the tasks one does.
 
 _kakka_ does have that small, fine-grained, and intelligent memory and surprises with their behavior; so does this app as well.
 
 _This app is developed through AI agents assisted_
-
 
 ![Todo](./docs/kakka01.webp)
 ![Kanban](./docs/kakka02.webp)
@@ -84,15 +83,94 @@ _This app is developed through AI agents assisted_
 
 ## Architecture
 
-Two-package monorepo, no workspace tooling:
+Two-package monorepo, no workspace tooling.
+
+### System Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                        Browser (SPA)                             │
+│  ┌──────────────────────────────────────────────────────────────┐│
+│  │  Astro + TailwindCSS v4 + Vanilla JS                        ││
+│  │  ┌─────────┐ ┌─────────┐ ┌──────────┐ ┌──────────────────┐ ││
+│  │  │  Todos  │ │ Kanban  │ │  Graph   │ │      Chat        │ ││
+│  │  │  List   │ │  Board  │ │  (vis.js)│ │  (KG-powered)    │ ││
+│  │  └────┬────┘ └────┬────┘ └────┬─────┘ └───────┬──────────┘ ││
+│  │       │           │           │               │             ││
+│  │  ┌────┴───────────┴───────────┴───────────────┴──────┐      ││
+│  │  │              fetch() /api/*                        │      ││
+│  │  └─────────────────────┬──────────────────────────────┘      ││
+│  └────────────────────────┼─────────────────────────────────────┘│
+└────────────────────────────┼─────────────────────────────────────┘
+                             │  HTTP (REST + JSON)
+                             ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                     FastAPI (uvicorn)                            │
+│                                                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐     │
+│  │  /api/tasks  │  │ /api/graph*  │  │    /api/chat        │     │
+│  │  CRUD + list │  │  nodes/edges │  │  KG query engine    │     │
+│  │  + reorder   │  │  + stats +   │  │  + action detection │     │
+│  │  + tags      │  │  + timeline  │  │  + task creation    │     │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬─────────────┘     │
+│         │                 │                  │                    │
+│  ┌──────┴─────────────────┴──────────────────┴──────────────┐   │
+│  │              SQLAlchemy Async ORM (aiosqlite)             │   │
+│  └──────────────────────────┬───────────────────────────────┘   │
+│                             │                                    │
+│  ┌──────────────────────────┴───────────────────────────────┐   │
+│  │                    SQLite (kakka.db)                      │   │
+│  │                                                          │   │
+│  │  ┌────────┐  ┌─────────┐  ┌─────────┐                   │   │
+│  │  │ Task   │  │ Entity  │  │ Triple  │                   │   │
+│  │  │ (CRUD) │  │ (nodes) │  │ (edges) │                   │   │
+│  │  └────────┘  └─────────┘  └─────────┘                   │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  KG Sync Hooks (task create → sync to graph entities)   │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Data Flow
+
+```
+ User Action           Frontend              Backend              Database
+ ───────────           ─────────             ───────              ────────
+
+ Create task ──► POST /api/tasks ──► Task CRUD ──► INSERT Task
+                                          │
+                                          └──► sync_task_to_graph()
+                                                └──► INSERT Entity + Triple
+
+ Drag kanban ──► PUT /api/tasks/id ──► Update status
+                                          │
+                                          └──► sync_task_update_graph()
+                                                └──► UPDATE Triple (expire old)
+                                                    INSERT Triple (new fact)
+
+ Chat query ───► POST /api/chat ──────► query_kg()
+                                            │
+                                            ├──► detect_action() ──► PUT task status
+                                            ├──► tag/status filter ──► SELECT tasks
+                                            └──► entity lookup ────► SELECT entities/triples
+
+ Graph view ──► GET /api/graph ──────► SELECT entities + triples
+ Stats ───────► GET /api/graph/stats ─► COUNT queries
+```
+
+### Project Structure
 
 ```
 kakka/
 ├── backend/              # FastAPI async REST API
 │   ├── main.py           # App entry, lifespan, CORS, static mount
 │   ├── database.py       # SQLAlchemy models, async session, seed data
-│   ├── models.py         # Pydantic schemas (TaskCreate, TaskUpdate, TaskOut)
-│   ├── routers.py        # All /api/ endpoints
+│   ├── models.py         # Pydantic schemas (TaskCreate, TaskUpdate, TaskOut, Chat*)
+│   ├── routers.py        # All /api/ endpoints (tasks, graph, chat)
+│   ├── chat.py           # KG query engine (no LLM — pure Python pattern matching)
+│   ├── kg_sync.py        # KG sync hooks (task ↔ entity/triple)
 │   ├── requirements.txt  # Python dependencies
 │   └── kakka.db          # SQLite database (auto-created)
 ├── frontend/             # Astro SPA
@@ -102,7 +180,9 @@ kakka/
 │   │   └── styles/global.css     # TailwindCSS v4 @theme tokens + @custom-variant
 │   ├── astro.config.mjs
 │   ├── package.json
-│   └── public/favicon.svg
+│   └── public/
+│       ├── favicon.svg
+│       └── vis-network.min.js     # vis-network standalone UMD bundle
 ├── spec/                 # Design specifications and wireframes
 │   ├── SPEC.md
 │   ├── DESIGN.md
@@ -114,7 +194,7 @@ kakka/
 └── README.md
 ```
 
-**Key constraint**: Frontend uses **vanilla JS only** — no React, Preact, or Svelte. All interactivity is in a single `<script is:inline>` block inside `index.astro`.
+**Key constraint**: Frontend uses **vanilla JS only** — no React, Preact, or Svelte. All interactivity is in a single `<script is:inline>` block inside `index.astro`. Chat uses a **pure Python knowledge graph query engine** (no LLM/Ollama).
 
 ---
 

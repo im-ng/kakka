@@ -77,13 +77,13 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: list[ChatMessage]
-    model: str = "llama3"
 
 
 class TaskRef(BaseModel):
     id: int
     title: str
     status: str
+    changed: bool = False
 
 
 class ChatResponse(BaseModel):
