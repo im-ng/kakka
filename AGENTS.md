@@ -2,172 +2,97 @@
 
 ## Architecture
 
-Two-package monorepo:
+Two-package monorepo (no workspace tooling):
 
-- `backend/` — FastAPI (Python) + SQLite REST API
-- `frontend/` — Astro + TailwindCSS 4, client-side rendered SPA (no SSR)
+- `backend/` — FastAPI async + SQLAlchemy ORM + aiosqlite + SQLite
+- `frontend/` — Astro SPA + TailwindCSS v4 + **vanilla JS only** (no React/Preact/Svelte)
 
-## Tech Stack (fixed, not negotiable)
+Four tabs: Todos list, Kanban board, Knowledge Graph (vis-network), Chat (KG query engine).
 
-- Frontend: Astro with **vanilla JS only** (no Preact, no React, no Svelte)
-- Styling: TailwindCSS **v4** (not v3 — syntax and config differ)
-- Drag & drop: HTML5 native Drag API (no libraries)
-- Backend: FastAPI + SQLite
-- Icons/logos: **inline SVGs only** — no external images, no icon font CDN (SPEC.md)
-- Use the `frontend-design` skill when building UI (SPEC.md)
+Data flow: Frontend fetches `API_BASE/api/*` → FastAPI routers → SQLAlchemy async → SQLite.
 
-## Design System
+KG sync hooks (`kg_sync.py`) keep Entity/Triple tables in sync with Task CRUD.
 
-Dark mode: class-based toggle (`class="dark"` on `<html>`), persisted in `localStorage` key `df-theme`.
+## Gotchas
 
-Custom Tailwind colors (from `design.html` wireframe):
+- **Column `grp` in DB, `project` in API/Pydantic**: The `Task` ORM model stores `project` as column `grp`. `task_to_dict()` maps it. Don't query `Task.project` — use `Task.grp`.
+- **Route ordering**: `/api/tasks/reorder` must be registered BEFORE `/api/tasks/{task_id}` in `routers.py` or FastAPI will match the path parameter first.
+- **`_format_response` returns a 3-tuple**: `(content, task_refs, actions)`. `query_kg()` must return this tuple directly — wrapping it in another tuple causes Pydantic 500 errors.
+- **Frontend API base**: Hardcoded as `http://0.0.0.0:8000/api` in `index.astro` (not `localhost`).
+- **`done` is derived**: `done = status == "done"`, set on both create and update. Not independently writable.
+- **HTML5 DnD handlers**: Kanban column drop handlers attach to static HTML, initialized ONCE. Not per-render.
+- **Chat is not LLM**: `chat.py` is pure Python pattern matching (regex + KG queries). No Ollama/httpx dependency.
+- **`TaskRef.changed: bool`**: Chat responses include this flag; frontend reloads task list when `true`.
 
-- navy: `#19183B` / light `#22214A` / lighter `#2C2B5E`
-- slate: `#708993` / light `#8BA3AC` / dark `#5A717B`
-- sage: `#A1C2BD` / light `#B8D4CF` / dark `#7FA8A2` / pale `#D4E8E4`
-- mint: `#E7F2EF` / light `#F0F7F5` / dark `#D0E4DF`
+## Tech Constraints
 
-Fonts: DM Sans (body), Playfair Display (headings).
-
-Two ColorHunt palettes in `DESIGN.md` — light palette (#355872, #7AAACE, #9CD5FF, #F7F8F0) and dark palette (#19183B, #708993, #A1C2BD, #E7F2EF). The custom Tailwind tokens above are the resolved synthesis of both.
-
-## Reference Wireframe
-
-`design.html` is a **592-line working prototype** with full task CRUD, kanban DnD, theme toggle, and toast system. Match its interactions, animations (fadeUp, card-lift, modal transitions), and visual fidelity. Do not redesign — implement what it shows.
-
-## Task Data Model
-
-| Field       | Type       | Notes                          |
-| ----------- | ---------- | ------------------------------ |
-| id          | int        | Auto-increment                 |
-| title       | str        | Required                       |
-| description | str        | Optional                       |
-| status      | str        | `todo` \| `progress` \| `done` |
-| done        | bool       | Derived from status            |
-| tags        | JSON array | e.g. `["work","urgent"]`       |
-| group       | str        | Optional grouping              |
-| created_at  | datetime   | Auto-set                       |
-| updated_at  | datetime   | Auto-updated                   |
-
-## REST API
-
-All endpoints under `/api/`:
-
-- `GET /api/tasks` — list (filter by tag, date, status via query params)
-- `POST /api/tasks` — create
-- `PUT /api/tasks/{id}` — update (edit fields, move kanban status)
-- `DELETE /api/tasks/{id}` — delete
-- `GET /api/tags` — list all distinct tags in use
-
-Kanban card moves persist via `PUT /api/tasks/{id}` with the new `status` value.
+- **Vanilla JS only** — no Preact, React, Svelte, or any framework. All interactivity in a single `<script is:inline>` in `index.astro`.
+- **TailwindCSS v4** — not v3. Uses `@import "tailwindcss"`, `@theme { }` block, `@custom-variant dark`. No `tailwind.config.js`.
+- **HTML5 native Drag API** — no drag libraries.
+- **Inline SVGs only** — no external images, no icon font CDN (except raven.png favicon).
+- **Dark mode**: class-based (`class="dark"` on `<html>`), persisted `localStorage` key `df-theme`. Light mode is default (un-prefixed), `dark:` overrides. No `light:` prefix.
+- **Font size cycle**: 16→19→23px, persisted `localStorage` key `df-font`.
+- **Icons**: inline SVG only, no icon fonts, no CDN.
 
 ## Dev Commands
 
-Backend:
-
 ```bash
+# Backend (port 8000)
 cd backend && python3 -m uvicorn main:app --port 8000 --reload
+
+# Frontend (port 4321) — must use bun, not npm
+cd frontend && bun run dev
+
+# Production build
+cd frontend && bun run build    # outputs to frontend/dist/
+# Then: backend serves frontend/dist/ via StaticFiles at /
+
+# Podman
+podman build -f Dockerfile -t kakka:0.1 .
+podman run -p 8000:8000 -v ./kakka_data/kakka.db:/app/backend/kakka.db localhost/kakka:0.1
 ```
 
-Frontend (uses **bun**, not npm):
+Both servers run simultaneously. No tests, no lint, no typecheck configs exist.
 
-```bash
-cd frontend && bun run dev       # dev server on :4321
-cd frontend && bun run build     # production build to dist/
-```
+## Backend Files
 
-Both servers must run simultaneously. Frontend fetches from `http://localhost:8000/api`.
+| File | Purpose |
+|---|---|
+| `main.py` | FastAPI app, lifespan, CORS, StaticFiles mount |
+| `database.py` | SQLAlchemy async models (Task, Entity, Triple), session, seed data |
+| `models.py` | Pydantic schemas (TaskCreate/Update/Out, ChatRequest/Response, TaskRef, GraphData) |
+| `routers.py` | All `/api/` endpoints: tasks CRUD, graph, chat |
+| `chat.py` | KG query engine: regex pattern matching, task creation, status actions |
+| `kg_sync.py` | Sync hooks: `sync_task_to_graph()`, `sync_task_update_graph()`, `sync_task_delete_graph()` |
+| `start.sh` | `uv run uvicorn main:app --host 0.0.0.0 --port 8000` |
 
-## Backend File Map
+## Frontend Files
 
-- `backend/main.py` — FastAPI app entry point, CORS config, router mount
-- `backend/database.py` — SQLite connection, schema init, seed data
-- `backend/models.py` — Pydantic schemas (TaskCreate, TaskUpdate, TaskOut)
-- `backend/routers.py` — All REST endpoints under `/api/`
+| File | Purpose |
+|---|---|
+| `src/pages/index.astro` | Entire SPA (~1300 lines): markup + all vanilla JS |
+| `src/layouts/Layout.astro` | HTML shell, fonts, theme CSS, animations, scrollbar, vis-network import |
+| `src/styles/global.css` | TailwindCSS v4 `@theme` tokens + `@custom-variant dark` |
+| `astro.config.mjs` | Astro config with TailwindCSS v4 Vite plugin |
+| `public/vis-network.min.js` | vis-network standalone UMD bundle |
 
-## Frontend File Map
+## Knowledge Graph
 
-- `frontend/src/layouts/Layout.astro` — HTML shell, theme CSS, fonts, scrollbar styles
-- `frontend/src/pages/index.astro` — Single-page app: all markup + vanilla JS client
-- `frontend/src/styles/global.css` — TailwindCSS v4 import + `@theme` custom tokens + `@custom-variant dark`
-- `frontend/astro.config.mjs` — Astro config with TailwindCSS v4 Vite plugin
+Three tables in SQLite alongside `tasks`:
 
-## Key Architecture Decisions
+- **Entity** — `id` (string like `task:1`, `tag:work`, `project:kakka`, `status:todo`), `name`, `type`, `properties` (JSON), `created_at`
+- **Triple** — `id`, `subject`, `predicate` (`has_tag`, `belongs_to`, `has_status`), `object`, `valid_from`, `valid_to` (null = current), `confidence`, `source_task_id`
 
-- **TailwindCSS v4 dark mode**: Uses `@custom-variant dark (&:where(.dark, .dark *))` in `global.css` for class-based dark mode toggle. The `dark:` prefix in classes activates when `<html>` has `class="dark"`.
-- **No `light:` prefix**: Light mode is the default (un-prefixed) style. `dark:` overrides apply when the dark class is present. The wireframe's `light:` classes were converted to base classes.
-- **Vanilla JS**: All interactivity (CRUD, DnD, theme, toasts, filters) is in a single `<script is:inline>` block inside `index.astro`. No React/Preact/Svelte.
-- **API calls**: Frontend fetches from `http://localhost:8000/api` using native `fetch()`. The `api()` helper wraps all requests.
-- **Theme persistence**: `localStorage` key `df-theme` stores `'light'` or `'dark'`.
-- **SQLite DB file**: `backend/kakka.db` — auto-created on first startup with 7 seed tasks.
+Sync hooks fire on task create/update/delete to maintain entity/triple consistency. Old facts get `valid_to` timestamp (temporal KG).
 
-## Requirements Checklist
+Graph view: vis-network force-directed. Node colors by type: task=sage, tag=amber, project=emerald, concept=slate.
 
-- [x] Kanban drag-and-drop state persists to backend (PUT /api/tasks/{id} with new status)
-- [x] Tasks filterable by tags and date (both list and kanban views)
-- [x] Task dialog supports: edit, tag, group, delete, description, save
-- [x] Dark/light mode toggle with localStorage persistence
-- [x] Inline SVGs only — no external images, no icon fonts
-- [x] Animations: fadeUp, card-lift, modal transitions, toast notifications
-- [x] Mobile: responsive grid (1-col kanban on mobile, 3-col on md+)
-- [ ] Site must look modern with nice animations — visual polish review needed
-- [ ] End-to-end browser testing needed
+Chat: pattern-matching engine in `chat.py`. Detects greetings, tag/status/project filters, entity lookups, keyword search, task ID refs. Status actions: `mark #3 as done`, `start #1`, `reopen #5`. Task creation: `add task "title" with description X`.
 
-## Behavioral guidelines
+## Design Tokens
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+Defined in `frontend/src/styles/global.css`:
 
-Tradeoff: These guidelines bias toward caution over speed. For trivial tasks, use judgment.
-
-1. Think Before Coding
-   Don't assume. Don't hide confusion. Surface tradeoffs.
-
-Before implementing:
-
-State your assumptions explicitly. If uncertain, ask.
-If multiple interpretations exist, present them - don't pick silently.
-If a simpler approach exists, say so. Push back when warranted.
-If something is unclear, stop. Name what's confusing. Ask.
-
-2. Simplicity First
-   Minimum code that solves the problem. Nothing speculative.
-
-No features beyond what was asked.
-No abstractions for single-use code.
-No "flexibility" or "configurability" that wasn't requested.
-No error handling for impossible scenarios.
-If you write 200 lines and it could be 50, rewrite it.
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-
-3. Surgical Changes
-   Touch only what you must. Clean up only your own mess.
-
-When editing existing code:
-
-Don't "improve" adjacent code, comments, or formatting.
-Don't refactor things that aren't broken.
-Match existing style, even if you'd do it differently.
-If you notice unrelated dead code, mention it - don't delete it.
-When your changes create orphans:
-
-Remove imports/variables/functions that YOUR changes made unused.
-Don't remove pre-existing dead code unless asked.
-The test: Every changed line should trace directly to the user's request.
-
-4. Goal-Driven Execution
-   Define success criteria. Loop until verified.
-
-Transform tasks into verifiable goals:
-
-"Add validation" → "Write tests for invalid inputs, then make them pass"
-"Fix the bug" → "Write a test that reproduces it, then make it pass"
-"Refactor X" → "Ensure tests pass before and after"
-For multi-step tasks, state a brief plan:
-
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
-
-These guidelines are working if: fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+- navy/navy-light/navy-lighter, slate/slate-light/slate-dark, sage/sage-light/sage-dark/sage-pale, mint/mint-light/mint-dark
+- Fonts: DM Sans (`--font-sans`), Playfair Display (`--font-display`)
+- `design.html` is the reference wireframe — match its interactions, don't redesign
