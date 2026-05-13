@@ -766,6 +766,7 @@ Route priority: `/api/` routes are matched first (via `include_router`), then st
 ## Attributions
 
 [Kakka Icon](https://www.flaticon.com/free-icon/raven_92031)
+[Mempalace](https://github.com/mempalace/mempalace)
 
 ## License
 
